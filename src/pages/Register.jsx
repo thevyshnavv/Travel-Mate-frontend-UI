@@ -12,7 +12,9 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
+    confirmPassword: '',
     role: 'traveler',
   });
 
@@ -24,10 +26,15 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      dispatch(registerFailure('Passwords do not match'));
+      return;
+    }
     dispatch(registerStart());
 
     try {
-      const response = await authAPI.register(formData);
+      const { name, email, phone, password, role } = formData;
+      const response = await authAPI.register({ name, email, phone, password, role });
       dispatch(registerSuccess(response.data));
       navigate('/');
     } catch (err) {
@@ -91,6 +98,25 @@ export default function Register() {
             </div>
           </div>
 
+          {/* Phone Number */}
+          <div>
+            <label className="block text-sm font-medium text-black mb-2">Phone Number</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                📞
+              </span>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="555-0199"
+                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                required
+              />
+            </div>
+          </div>
+
           {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-black mb-2">I am a</label>
@@ -131,6 +157,25 @@ export default function Register() {
               </button>
             </div>
             <p className="text-xs text-gray-600 mt-1">At least 6 characters</p>
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-sm font-medium text-black mb-2">Confirm Password</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                🔐
+              </span>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                required
+              />
+            </div>
           </div>
 
           {/* Sign Up Button */}

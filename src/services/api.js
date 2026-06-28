@@ -26,22 +26,57 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
 };
 
-// Agency endpoints (for later)
+// User Profile endpoints
+export const userAPI = {
+  getProfile: () => api.get('/users/profile'),
+  updateProfile: (formData) => api.put('/users/profile', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+};
+
+// Agency endpoints
 export const agencyAPI = {
   getAll: (params) => api.get('/agencies', { params }),
   getById: (id) => api.get(`/agencies/${id}`),
-  create: (data) => api.post('/agencies', data),
-  update: (id, data) => api.put(`/agencies/${id}`, data),
+  create: (formData) => api.post('/agencies', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  update: (id, formData) => api.put(`/agencies/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   delete: (id) => api.delete(`/agencies/${id}`),
+  getMyAgency: () => api.get('/agencies/user/my-agency'),
+  createPackage: (formData) => api.post('/agencies/packages', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getPackages: (agencyId) => api.get(`/agencies/${agencyId}/packages`),
+  getMyPackages: () => api.get('/agencies/packages/my-packages'),
+  deletePackage: (id) => api.delete(`/agencies/packages/${id}`),
 };
 
-// Taxi endpoints (for later)
+// Taxi endpoints
 export const taxiAPI = {
   getAll: (params) => api.get('/taxi', { params }),
   getById: (id) => api.get(`/taxi/${id}`),
   create: (data) => api.post('/taxi', data),
   update: (id, data) => api.put(`/taxi/${id}`, data),
   delete: (id) => api.delete(`/taxi/${id}`),
+  getMyTaxi: () => api.get('/taxi/user/my-taxi'),
+  addVehicle: (id, data) => api.post(`/taxi/${id}/add-vehicle`, data),
+  addDriver: (id, data) => api.post(`/taxi/${id}/add-driver`, data),
+};
+
+// Booking endpoints
+export const bookingAPI = {
+  create: (data) => api.post('/bookings', data),
+  getMyBookings: () => api.get('/bookings'),
+  updateStatus: (id, data) => api.put(`/bookings/${id}/status`, data),
+};
+
+// Review endpoints
+export const reviewAPI = {
+  create: (data) => api.post('/reviews', data),
+  getByProvider: (agencyOrProviderId) => api.get('/reviews', { params: { agencyOrProviderId } }),
 };
 
 export default api;

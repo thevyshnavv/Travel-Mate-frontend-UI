@@ -27,13 +27,36 @@ export default function Navbar() {
           </Link>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-sm font-semibold">
             {token && user ? (
               <>
-                <span className="text-gray-700">Welcome, {user.name}</span>
+                <Link to="/profile" className="text-gray-600 hover:text-black transition">
+                  👤 Profile
+                </Link>
+                
+                {user.role === 'traveler' && (
+                  <Link to="/browse-agencies" className="text-gray-600 hover:text-black transition">
+                    🌍 Browse Agencies
+                  </Link>
+                )}
+                {user.role === 'agency' && (
+                  <Link to="/agency-dashboard" className="text-gray-600 hover:text-black transition">
+                    💼 Dashboard
+                  </Link>
+                )}
+                {user.role === 'taxi_provider' && (
+                  <Link to="/taxi-dashboard" className="text-gray-600 hover:text-black transition">
+                    🚕 Dashboard
+                  </Link>
+                )}
+
+                <span className="text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg text-xs font-bold uppercase">
+                  {user.role.replace('_', ' ')}
+                </span>
+                
                 <button
                   onClick={handleLogout}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                  className="px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-lg transition"
                 >
                   Logout
                 </button>
