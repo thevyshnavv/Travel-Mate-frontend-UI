@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import BrowseAgencies from './pages/BrowseAgencies';
+import BrowseTaxis from './pages/BrowseTaxis';
 import Profile from './pages/Profile';
 import AgencyDashboard from './pages/AgencyDashboard';
 import TaxiDashboard from './pages/TaxiDashboard';
@@ -32,6 +33,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/browse-taxis"
+          element={
+            <ProtectedRoute>
+              <BrowseTaxis />
             </ProtectedRoute>
           }
         />

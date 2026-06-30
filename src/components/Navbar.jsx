@@ -39,6 +39,11 @@ export default function Navbar() {
                     🌍 Browse Agencies
                   </Link>
                 )}
+                {user.role === 'traveler' && (
+                  <Link to="/browse-taxis" className="text-gray-600 hover:text-black transition">
+                    🚖 Browse Taxis
+                  </Link>
+                )}
                 {user.role === 'agency' && (
                   <Link to="/agency-dashboard" className="text-gray-600 hover:text-black transition">
                     💼 Dashboard
