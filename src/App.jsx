@@ -9,6 +9,10 @@ import BrowseTaxis from './pages/BrowseTaxis';
 import Profile from './pages/Profile';
 import AgencyDashboard from './pages/AgencyDashboard';
 import TaxiDashboard from './pages/TaxiDashboard';
+import AgencyDetails from './pages/AgencyDetails';
+import PackageDetails from './pages/PackageDetails';
+import TaxiDetails from './pages/TaxiDetails';
+import MyBookings from './pages/MyBookings';
 
 function App() {
   return (
@@ -29,6 +33,22 @@ function App() {
           }
         />
         <Route
+          path="/agency/:id"
+          element={
+            <ProtectedRoute>
+              <AgencyDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/package/:id"
+          element={
+            <ProtectedRoute>
+              <PackageDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute>
@@ -37,10 +57,26 @@ function App() {
           }
         />
         <Route
+          path="/my-bookings"
+          element={
+            <ProtectedRoute>
+              <MyBookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/browse-taxis"
           element={
             <ProtectedRoute>
               <BrowseTaxis />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/taxi/:id"
+          element={
+            <ProtectedRoute>
+              <TaxiDetails />
             </ProtectedRoute>
           }
         />

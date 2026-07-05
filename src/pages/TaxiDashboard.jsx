@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../redux/authSlice';
 import { taxiAPI, bookingAPI, reviewAPI } from '../services/api';
+import { io } from 'socket.io-client';
 
 export default function TaxiDashboard() {
   const dispatch = useDispatch();
@@ -17,6 +18,7 @@ export default function TaxiDashboard() {
   const [reviews, setReviews] = useState([]);
   const [taxiProfile, setTaxiProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
 
   // Taxi Profile Edit Form
   const [profileForm, setProfileForm] = useState({
@@ -53,7 +55,23 @@ export default function TaxiDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+    
+    // Connect to Socket
+    const socket = io('http://localhost:5000');
+    if (user && user._id) {
+      socket.emit('join_provider', user._id);
+    }
+    
+    socket.on('new_taxi_booking', (data) => {
+      setNotifications(prev => [data, ...prev]);
+      // Show notification to user or just refresh bookings
+      fetchDashboardData(); // Refresh list to get the new booking
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -230,10 +248,19 @@ export default function TaxiDashboard() {
           <h2 className="text-xl font-extrabold text-black tracking-tight mb-8">Taxi Portal</h2>
           <nav className="space-y-1.5">
             <button
-              onClick={() => setActiveTab('bookings')}
-              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === 'bookings' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-black'}`}
+              onClick={() => {
+                setActiveTab('bookings');
+                setNotifications([]); // clear notifications on click
+              }}
+              className={`relative w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === 'bookings' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-black'}`}
             >
               🚕 Ride Bookings ({bookings.length})
+              {notifications.length > 0 && (
+                <span className="absolute top-2 right-2 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('reviews')}
