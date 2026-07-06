@@ -51,6 +51,10 @@ export const agencyAPI = {
   }),
   getPackages: (agencyId) => api.get(`/agencies/${agencyId}/packages`),
   getMyPackages: () => api.get('/agencies/packages/my-packages'),
+  getAllPackages: (params) => api.get('/agencies/packages/all', { params }),
+  updatePackage: (id, formData) => api.put(`/agencies/packages/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   deletePackage: (id) => api.delete(`/agencies/packages/${id}`),
 };
 

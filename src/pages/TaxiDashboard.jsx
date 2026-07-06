@@ -19,6 +19,7 @@ export default function TaxiDashboard() {
   const [taxiProfile, setTaxiProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [toast, setToast] = useState(null);
 
   // Taxi Profile Edit Form
   const [profileForm, setProfileForm] = useState({
@@ -57,15 +58,20 @@ export default function TaxiDashboard() {
     fetchDashboardData();
     
     // Connect to Socket
-    const socket = io('http://localhost:5000');
-    if (user && user._id) {
-      socket.emit('join_provider', user._id);
+    // We should ideally use the same backend URL as the API
+    const socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:5000');
+    
+    if (user && (user.id || user._id)) {
+      socket.emit('join_provider_room', user.id || user._id);
     }
     
     socket.on('new_taxi_booking', (data) => {
       setNotifications(prev => [data, ...prev]);
-      // Show notification to user or just refresh bookings
-      fetchDashboardData(); // Refresh list to get the new booking
+      if (data.booking) {
+        setBookings(prev => [data.booking, ...prev]);
+        setToast(data.message || 'New booking request received!');
+        setTimeout(() => setToast(null), 6000);
+      }
     });
 
     return () => {
@@ -241,7 +247,19 @@ export default function TaxiDashboard() {
   const maxBookings = Math.max(...chartData.map(d => d.bookings), 5);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="absolute top-6 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <span className="text-xl">🚕</span>
+          <div>
+            <p className="font-bold text-sm">Notification</p>
+            <p className="text-xs">{toast}</p>
+          </div>
+          <button onClick={() => setToast(null)} className="ml-4 text-white/80 hover:text-white">✕</button>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-100 flex flex-col justify-between shrink-0">
         <div className="p-6">

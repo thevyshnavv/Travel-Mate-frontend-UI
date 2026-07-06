@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../redux/authSlice';
 import { agencyAPI, bookingAPI, reviewAPI } from '../services/api';
+import { io } from 'socket.io-client';
 
 export default function AgencyDashboard() {
   const dispatch = useDispatch();
@@ -18,6 +19,8 @@ export default function AgencyDashboard() {
   const [agencyProfile, setAgencyProfile] = useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [toast, setToast] = useState(null);
 
   // Agency Edit Profile Form
   const [profileForm, setProfileForm] = useState({
@@ -49,10 +52,31 @@ export default function AgencyDashboard() {
   });
   const [pkgImages, setPkgImages] = useState([]);
   const [pkgSuccess, setPkgSuccess] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [editingPkgId, setEditingPkgId] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+
+    const socket = io(import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:5000');
+    
+    if (user && (user.id || user._id)) {
+      socket.emit('join_provider_room', user.id || user._id);
+    }
+    
+    socket.on('new_package_booking', (data) => {
+      setNotifications(prev => [data, ...prev]);
+      if (data.booking) {
+        setBookings(prev => [data.booking, ...prev]);
+        setToast(data.message || 'New package booking received!');
+        setTimeout(() => setToast(null), 6000);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -143,7 +167,7 @@ export default function AgencyDashboard() {
     }
   };
 
-  const handleCreatePackage = async (e) => {
+  const handleSubmitPackage = async (e) => {
     e.preventDefault();
     setPkgSuccess('');
     try {
@@ -164,8 +188,13 @@ export default function AgencyDashboard() {
         }
       }
 
-      await agencyAPI.createPackage(formData);
-      setPkgSuccess('Package added successfully!');
+      if (editMode) {
+        await agencyAPI.updatePackage(editingPkgId, formData);
+        setPkgSuccess('Package updated successfully!');
+      } else {
+        await agencyAPI.createPackage(formData);
+        setPkgSuccess('Package added successfully!');
+      }
       
       // Reset Form
       setNewPkgForm({
@@ -181,6 +210,9 @@ export default function AgencyDashboard() {
       });
       setPkgImages([]);
 
+      setEditingPkgId(null);
+      setEditMode(false);
+
       // Refresh Packages
       const providerId = agencyProfile.userId._id || agencyProfile.userId;
       const pkgsRes = await agencyAPI.getPackages(providerId);
@@ -188,8 +220,35 @@ export default function AgencyDashboard() {
 
       setTimeout(() => setPkgSuccess(''), 3000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create package');
+      alert(err.response?.data?.message || 'Failed to save package');
     }
+  };
+
+  const handleEditPackageClick = (pkg) => {
+    setEditMode(true);
+    setEditingPkgId(pkg._id);
+    setNewPkgForm({
+      packageName: pkg.packageName,
+      description: pkg.description,
+      destination_country: pkg.destination_country,
+      destination_city: pkg.destination_city,
+      duration_days: pkg.duration_days,
+      duration_nights: pkg.duration_nights,
+      pricePerPerson: pkg.pricePerPerson,
+      included: pkg.included ? (Array.isArray(pkg.included) ? pkg.included.join(', ') : pkg.included) : '',
+      maxGroupSize: pkg.maxGroupSize
+    });
+    setPkgImages([]);
+    setActiveTab('packages');
+  };
+
+  const cancelEdit = () => {
+    setEditMode(false);
+    setEditingPkgId(null);
+    setNewPkgForm({
+      packageName: '', description: '', destination_country: '', destination_city: '', duration_days: 1, duration_nights: 0, pricePerPerson: 100, included: '', maxGroupSize: 10
+    });
+    setPkgImages([]);
   };
 
   const handleDeletePackage = async (packageId) => {
@@ -256,7 +315,19 @@ export default function AgencyDashboard() {
   const maxBookings = Math.max(...chartData.map(d => d.bookings), 5); // baseline of 5
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="absolute top-6 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
+          <span className="text-xl">🔔</span>
+          <div>
+            <p className="font-bold text-sm">Notification</p>
+            <p className="text-xs">{toast}</p>
+          </div>
+          <button onClick={() => setToast(null)} className="ml-4 text-white/80 hover:text-white">✕</button>
+        </div>
+      )}
+
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-white border-r border-gray-100 flex flex-col justify-between shrink-0">
         <div className="p-6">
@@ -264,10 +335,19 @@ export default function AgencyDashboard() {
           
           <nav className="space-y-1.5">
             <button
-              onClick={() => setActiveTab('bookings')}
-              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === 'bookings' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-black'}`}
+              onClick={() => {
+                setActiveTab('bookings');
+                setNotifications([]);
+              }}
+              className={`relative w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === 'bookings' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-black'}`}
             >
               📅 Bookings ({bookings.length})
+              {notifications.length > 0 && (
+                <span className="absolute top-2 right-2 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
             </button>
             
             <button
@@ -609,7 +689,7 @@ export default function AgencyDashboard() {
             
             {/* Create package form */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-3xl">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">Add New Travel Package</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-6">{editMode ? 'Edit Travel Package' : 'Add New Travel Package'}</h3>
               
               {pkgSuccess && (
                 <div className="p-3 bg-green-50 text-green-800 rounded border border-green-200 mb-6 text-sm text-center">
@@ -617,7 +697,7 @@ export default function AgencyDashboard() {
                 </div>
               )}
 
-              <form onSubmit={handleCreatePackage} className="space-y-4">
+              <form onSubmit={handleSubmitPackage} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Package Name</label>
@@ -723,12 +803,23 @@ export default function AgencyDashboard() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-black text-white hover:bg-gray-800 rounded font-semibold text-xs transition"
-                >
-                  Create Package
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-black text-white hover:bg-gray-800 rounded font-semibold text-xs transition"
+                  >
+                    {editMode ? 'Update Package' : 'Create Package'}
+                  </button>
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="px-6 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded font-semibold text-xs transition"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
 
@@ -745,12 +836,20 @@ export default function AgencyDashboard() {
                         <h4 className="font-bold text-gray-900 text-sm">{p.packageName}</h4>
                         <p className="text-xs text-gray-500">{p.duration_days} Days / {p.duration_nights} Nights • ${p.pricePerPerson} per person</p>
                       </div>
-                      <button
-                        onClick={() => handleDeletePackage(p._id)}
-                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded transition"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditPackageClick(p)}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePackage(p._id)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -5,20 +5,22 @@ import { agencyAPI } from '../services/api';
 export default function BrowseAgencies() {
   const navigate = useNavigate();
   const [agencies, setAgencies] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [viewMode, setViewMode] = useState('agencies'); // 'agencies' | 'packages'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
   // Search Filters
-  const [filters, setFilters] = useState({ country: '', city: '' });
+  const [placeFilter, setPlaceFilter] = useState('');
 
   useEffect(() => {
     fetchAgencies();
   }, []);
 
-  const fetchAgencies = async (searchFilters = filters) => {
+  const fetchAgencies = async () => {
     setLoading(true);
     try {
-      const response = await agencyAPI.getAll(searchFilters);
+      const response = await agencyAPI.getAll({});
       setAgencies(response.data.agencies || []);
       setError(null);
     } catch (err) {
@@ -28,20 +30,42 @@ export default function BrowseAgencies() {
     }
   };
 
+  const fetchPackages = async (place) => {
+    setLoading(true);
+    try {
+      const response = await agencyAPI.getAllPackages({ place });
+      setPackages(response.data.packages || []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch packages for this location.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setPlaceFilter(e.target.value);
   };
 
   const handleFilterSubmit = (e) => {
     e.preventDefault();
-    fetchAgencies(filters);
+    if (placeFilter.trim() === '') {
+      setViewMode('agencies');
+      fetchAgencies();
+    } else {
+      setViewMode('packages');
+      fetchPackages(placeFilter);
+    }
   };
 
   const handleClearFilters = () => {
-    const cleared = { country: '', city: '' };
-    setFilters(cleared);
-    fetchAgencies(cleared);
+    setPlaceFilter('');
+    setViewMode('agencies');
+    fetchAgencies();
+  };
+
+  const handleViewPackage = (pkg) => {
+    navigate(`/package/${pkg._id}`);
   };
 
   const handleViewDetails = (agency) => {
@@ -77,25 +101,14 @@ export default function BrowseAgencies() {
 
         {/* Filters */}
         <form onSubmit={handleFilterSubmit} className="bg-white p-6 rounded-xl shadow-md mb-8 flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Country</label>
+          <div className="flex-1 min-w-[300px]">
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Search Destination Place (City / Country)</label>
             <input
               type="text"
-              name="country"
-              value={filters.country}
+              name="place"
+              value={placeFilter}
               onChange={handleFilterChange}
-              placeholder="e.g. United States"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">City</label>
-            <input
-              type="text"
-              name="city"
-              value={filters.city}
-              onChange={handleFilterChange}
-              placeholder="e.g. Miami"
+              placeholder="e.g. Paris, Tokyo, United States"
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
             />
           </div>
@@ -106,7 +119,7 @@ export default function BrowseAgencies() {
             >
               Search
             </button>
-            {(filters.country || filters.city) && (
+            {placeFilter && (
               <button
                type="button"
                onClick={handleClearFilters}
@@ -118,21 +131,21 @@ export default function BrowseAgencies() {
           </div>
         </form>
 
-        {/* Agency Grid */}
+        {/* Results Grid */}
         {loading ? (
           <div className="text-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto"></div>
-            <p className="text-gray-500 mt-4">Loading travel agencies...</p>
+            <p className="text-gray-500 mt-4">Loading data...</p>
           </div>
         ) : error ? (
           <div className="text-center py-10 bg-red-50 text-red-700 border border-red-200 rounded-lg">
             {error}
           </div>
-        ) : agencies.length === 0 ? (
+        ) : (viewMode === 'agencies' && agencies.length === 0) || (viewMode === 'packages' && packages.length === 0) ? (
           <div className="text-center py-20 bg-white rounded-lg shadow-sm border border-gray-100">
-            <p className="text-gray-500 text-lg">No agencies found matching your filters.</p>
+            <p className="text-gray-500 text-lg">No results found matching your search.</p>
           </div>
-        ) : (
+        ) : viewMode === 'agencies' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {agencies.map((agency) => (
               <div key={agency._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 flex flex-col h-full border border-gray-100">
@@ -184,6 +197,43 @@ export default function BrowseAgencies() {
                     className="w-full py-2.5 border border-black rounded-lg text-sm font-semibold hover:bg-black hover:text-white transition duration-200"
                   >
                     View Packages & Reviews
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {packages.map((pkg) => (
+              <div key={pkg._id} className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 flex flex-col h-full border border-gray-100">
+                <div className="h-40 bg-gray-100 relative overflow-hidden">
+                  {pkg.images && pkg.images.length > 0 ? (
+                     <img src={`http://localhost:5000${pkg.images[0]}`} className="w-full h-full object-cover" alt="package" />
+                  ) : (
+                     <div className="w-full h-full flex items-center justify-center text-3xl">🌴</div>
+                  )}
+                  <span className="absolute top-4 right-4 bg-white/90 px-3 py-1 text-xs font-bold rounded shadow-sm text-black uppercase">
+                     ${pkg.pricePerPerson}
+                  </span>
+                </div>
+                <div className="p-5 flex-1 flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1 leading-tight">{pkg.packageName}</h3>
+                  <p className="text-xs text-gray-500 mb-3">By {pkg.agencyId?.agencyName || 'Travel Agency'}</p>
+                  
+                  <div className="text-xs font-semibold text-gray-600 mb-3 flex items-center gap-1.5">
+                    <span>📍 {pkg.destination_city}, {pkg.destination_country}</span>
+                    <span>• {pkg.duration_days}D/{pkg.duration_nights}N</span>
+                  </div>
+                  
+                  <p className="text-gray-600 text-xs line-clamp-2 mb-4 flex-1">
+                    {pkg.description}
+                  </p>
+                  
+                  <button
+                    onClick={() => handleViewPackage(pkg)}
+                    className="w-full py-2 bg-black text-white rounded font-semibold text-xs hover:bg-gray-800 transition"
+                  >
+                    View Details
                   </button>
                 </div>
               </div>
