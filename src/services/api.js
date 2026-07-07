@@ -83,4 +83,23 @@ export const reviewAPI = {
   getByProvider: (agencyOrProviderId) => api.get('/reviews', { params: { agencyOrProviderId } }),
 };
 
-export default api;
+// Payment endpoints
+export const paymentAPI = {
+  createOrder: (amount, currency = 'INR') =>
+    api.post('/payment/create-order', { amount, currency }),
+
+  verifyPayment: (razorpayResponse, bookingId, amount, billingName = '', billingPhone = '') =>
+    api.post('/payment/verify', {
+      ...razorpayResponse,
+      bookingId,
+      amount,
+      currency: 'INR',
+      paymentMethod: 'Card',
+      billingName,
+      billingPhone,
+    }),
+
+  getMyPayments: () => api.get('/payment/my-payments'),
+};
+
+export default api;
