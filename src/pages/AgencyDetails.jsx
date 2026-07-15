@@ -21,11 +21,9 @@ export default function AgencyDetails() {
   const fetchAgencyDetails = async () => {
     setLoading(true);
     try {
-      // Find the agency by ID. Since agencyAPI.getAll returns all, we might have to filter
-      // Or we need a getById. Assuming the backend doesn't have agencyAPI.getById, let's fetch all and filter for now, or just use getById if it exists.
-      // Let's assume getById exists or we get from getAll.
-      const response = await agencyAPI.getAll();
-      const foundAgency = response.data.agencies.find(a => a._id === id);
+      // Find the agency by ID.
+      const response = await agencyAPI.getById(id);
+      const foundAgency = response.data.agency;
       
       if (!foundAgency) {
         setError('Agency not found');
@@ -42,6 +40,7 @@ export default function AgencyDetails() {
       setPackages(pkgsRes.data.packages || []);
       setReviews(reviewsRes.data.reviews || []);
     } catch (err) {
+      console.error('FETCH AGENCY DETAILS ERROR:', err);
       setError('Failed to fetch agency details.');
     } finally {
       setLoading(false);

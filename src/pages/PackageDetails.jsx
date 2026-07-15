@@ -47,27 +47,9 @@ export default function PackageDetails() {
     try {
       // Find package by searching through agencies
       // (Optimally this would be a direct getPackageById endpoint, but we work with what we have if it doesn't exist)
-      // Actually, agencyAPI.getPackages(providerId) is what we used. 
-      // Let's assume we can fetch all agencies and then fetch their packages. 
-      // Wait, that's inefficient. Let's see if there is a getPackage endpoint.
-      // There isn't in api.js by default except getPackages(providerId). 
-      // Let's just fetch all agencies and their packages to find it for now, or just make a new endpoint if needed.
-      // Wait! `agencyAPI.getPackages(id)`? No, that takes providerId.
-      
-      const res = await agencyAPI.getAll();
-      let foundPkg = null;
-      let foundAgency = null;
-      
-      for (let a of res.data.agencies) {
-        const providerId = a.userId._id || a.userId;
-        const pkgs = await agencyAPI.getPackages(providerId);
-        const p = pkgs.data.packages.find(x => x._id === id);
-        if (p) {
-          foundPkg = p;
-          foundAgency = a;
-          break;
-        }
-      }
+      const response = await agencyAPI.getPackageById(id);
+      const foundPkg = response.data.package;
+      const foundAgency = response.data.agency;
 
       if (!foundPkg) {
         setError('Package not found.');
@@ -85,17 +67,22 @@ export default function PackageDetails() {
 
       // Fetch Bookings to see if user can review
       if (token && user?.role === 'traveler') {
-        const bookingsRes = await bookingAPI.getMyBookings();
-        const filteredBookings = (bookingsRes.data.bookings || []).filter(
-          b => b.bookingType === 'package' && (b.packageOrServiceId?._id === foundPkg._id || b.packageOrServiceId === foundPkg._id)
-        );
-        setUserBookings(filteredBookings);
-        if (filteredBookings.length > 0) {
-          setReviewFormData(prev => ({ ...prev, bookingId: filteredBookings[0]._id }));
+        try {
+          const bookingsRes = await bookingAPI.getMyBookings();
+          const filteredBookings = (bookingsRes.data.bookings || []).filter(
+            b => b.bookingType === 'package' && (b.packageOrServiceId?._id === foundPkg._id || b.packageOrServiceId === foundPkg._id)
+          );
+          setUserBookings(filteredBookings);
+          if (filteredBookings.length > 0) {
+            setReviewFormData(prev => ({ ...prev, bookingId: filteredBookings[0]._id }));
+          }
+        } catch (bookingErr) {
+          console.warn('Failed to fetch traveler bookings:', bookingErr.message);
         }
       }
 
     } catch (err) {
+      console.error('FETCH PACKAGE DETAILS ERROR:', err.message, err.config?.url, err.response?.data);
       setError('Failed to load package details.');
     } finally {
       setLoading(false);

@@ -56,6 +56,7 @@ export const agencyAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   deletePackage: (id) => api.delete(`/agencies/packages/${id}`),
+  getPackageById: (id) => api.get(`/agencies/packages/detail/${id}`),
 };
 
 // Taxi endpoints

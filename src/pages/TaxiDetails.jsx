@@ -57,8 +57,8 @@ export default function TaxiDetails() {
     setLoading(true);
     try {
       // Find the taxi by ID.
-      const response = await taxiAPI.getAll();
-      const foundTaxi = response.data.taxiProviders.find(t => t._id === id);
+      const response = await taxiAPI.getById(id);
+      const foundTaxi = response.data.taxiProvider;
       
       if (!foundTaxi) {
         setError('Taxi Provider not found.');
@@ -73,17 +73,22 @@ export default function TaxiDetails() {
       setReviews(reviewsRes.data.reviews || []);
 
       if (token && user?.role === 'traveler') {
-        const bookingsRes = await bookingAPI.getMyBookings();
-        const myTaxiBookings = (bookingsRes.data.bookings || []).filter(
-          b => b.bookingType === 'taxi' &&
-               (b.packageOrServiceId?._id || b.packageOrServiceId)?.toString() === foundTaxi._id?.toString()
-        );
-        setUserBookings(myTaxiBookings);
-        if (myTaxiBookings.length > 0) {
-          setReviewFormData(prev => ({ ...prev, bookingId: myTaxiBookings[0]._id }));
+        try {
+          const bookingsRes = await bookingAPI.getMyBookings();
+          const myTaxiBookings = (bookingsRes.data.bookings || []).filter(
+            b => b.bookingType === 'taxi' &&
+                 (b.packageOrServiceId?._id || b.packageOrServiceId)?.toString() === foundTaxi._id?.toString()
+          );
+          setUserBookings(myTaxiBookings);
+          if (myTaxiBookings.length > 0) {
+            setReviewFormData(prev => ({ ...prev, bookingId: myTaxiBookings[0]._id }));
+          }
+        } catch (bookingErr) {
+          console.warn('Failed to fetch traveler bookings:', bookingErr.message);
         }
       }
     } catch (err) {
+      console.error('FETCH TAXI DETAILS ERROR:', err.message, err.config?.url, err.response?.data);
       setError('Failed to fetch taxi details.');
     } finally {
       setLoading(false);
