@@ -49,6 +49,7 @@ export default function TaxiDashboard() {
   // Add Driver Form State
   const [driverForm, setDriverForm] = useState({
     name: '',
+    email: '',
     phone: '',
     licenseNumber: '',
     experience: 2
@@ -189,7 +190,7 @@ export default function TaxiDashboard() {
       if (response.data.success) {
         setFleetSuccess('Driver registered successfully!');
         setTaxiProfile(response.data.taxiProvider);
-        setDriverForm({ name: '', phone: '', licenseNumber: '', experience: 2 });
+        setDriverForm({ name: '', email: '', phone: '', licenseNumber: '', experience: 2 });
         setTimeout(() => setFleetSuccess(''), 3000);
       }
     } catch (err) {
@@ -338,6 +339,7 @@ export default function TaxiDashboard() {
                       <th className="p-4">Booking No</th>
                       <th className="p-4">Traveler</th>
                       <th className="p-4">Ride Date</th>
+                      <th className="p-4">Driver</th>
                       <th className="p-4">Fare</th>
                       <th className="p-4">Status</th>
                       <th className="p-4">Actions</th>
@@ -354,6 +356,16 @@ export default function TaxiDashboard() {
                         <td className="p-4 text-xs">
                           {new Date(b.bookingDate).toLocaleDateString()}
                           <span className="block text-[10px] text-gray-400 mt-0.5">{b.specialRequests && `Note: ${b.specialRequests}`}</span>
+                        </td>
+                        <td className="p-4">
+                          {b.assignedDriverId ? (
+                            <div>
+                              <div className="text-sm font-semibold text-black">{b.assignedDriverId.name}</div>
+                              <div className="text-xs text-gray-400">{b.assignedDriverId.email || 'No email'}</div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Not Assigned</span>
+                          )}
                         </td>
                         <td className="p-4 font-bold text-black">${b.totalPrice}</td>
                         <td className="p-4">
@@ -534,6 +546,16 @@ export default function TaxiDashboard() {
                     />
                   </div>
                   <div>
+                    <label className="block text-[10px] font-bold text-gray-500">Driver Email</label>
+                    <input
+                      type="email"
+                      className="w-full p-2 border border-gray-200 bg-white rounded text-xs focus:outline-none"
+                      value={driverForm.email}
+                      onChange={(e) => setDriverForm(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-bold text-gray-500">Phone</label>
                     <input
                       type="text"
@@ -579,7 +601,7 @@ export default function TaxiDashboard() {
                   <div key={i} className="p-3 border border-gray-100 rounded-lg flex justify-between items-center text-xs">
                     <div>
                       <p className="font-bold text-gray-900">{d.name}</p>
-                      <p className="text-[10px] text-gray-400">Phone: {d.phone} | Lic: {d.licenseNumber}</p>
+                      <p className="text-[10px] text-gray-400">Email: {d.email} | Phone: {d.phone} | Lic: {d.licenseNumber}</p>
                     </div>
                     <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-bold">{d.experience} yrs exp</span>
                   </div>
