@@ -103,4 +103,12 @@ export const paymentAPI = {
   getMyPayments: () => api.get('/payment/my-payments'),
 };
 
+// Guide endpoints
+export const guideAPI = {
+  create: (data) => api.post('/agencies/guides', data),
+  getMyGuides: () => api.get('/agencies/guides'),
+  update: (id, data) => api.put(`/agencies/guides/${id}`, data),
+  delete: (id) => api.delete(`/agencies/guides/${id}`),
+};
+
 export default api;

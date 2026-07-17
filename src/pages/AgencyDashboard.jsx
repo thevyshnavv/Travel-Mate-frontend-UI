@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../redux/authSlice';
-import { agencyAPI, bookingAPI, reviewAPI } from '../services/api';
+import { agencyAPI, bookingAPI, reviewAPI, guideAPI } from '../services/api';
 import { io } from 'socket.io-client';
 
 export default function AgencyDashboard() {
@@ -54,6 +54,18 @@ export default function AgencyDashboard() {
   const [pkgSuccess, setPkgSuccess] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editingPkgId, setEditingPkgId] = useState(null);
+
+  // Guide Management State
+  const [guides, setGuides] = useState([]);
+  const [newGuideForm, setNewGuideForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'Active'
+  });
+  const [guideSuccess, setGuideSuccess] = useState('');
+  const [guideEditMode, setGuideEditMode] = useState(false);
+  const [editingGuideId, setEditingGuideId] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -120,6 +132,10 @@ export default function AgencyDashboard() {
       // 4. Fetch Bookings for this agency
       const bookingsRes = await bookingAPI.getMyBookings();
       setBookings(bookingsRes.data.bookings || []);
+
+      // 5. Fetch Guides for this agency
+      const guidesRes = await guideAPI.getMyGuides();
+      setGuides(guidesRes.data.guides || []);
 
     } catch (err) {
       console.error('Error fetching dashboard data', err);
@@ -261,6 +277,63 @@ export default function AgencyDashboard() {
     }
   };
 
+  const handleSubmitGuide = async (e) => {
+    e.preventDefault();
+    setGuideSuccess('');
+    try {
+      if (guideEditMode) {
+        const res = await guideAPI.update(editingGuideId, newGuideForm);
+        if (res.data.success) {
+          setGuideSuccess('Guide updated successfully!');
+          setGuides(prev => prev.map(g => g._id === editingGuideId ? res.data.guide : g));
+          setNewGuideForm({ name: '', email: '', phone: '', status: 'Active' });
+          setGuideEditMode(false);
+          setEditingGuideId(null);
+        }
+      } else {
+        const res = await guideAPI.create(newGuideForm);
+        if (res.data.success) {
+          setGuideSuccess('Guide registered successfully!');
+          setGuides(prev => [res.data.guide, ...prev]);
+          setNewGuideForm({ name: '', email: '', phone: '', status: 'Active' });
+        }
+      }
+      setTimeout(() => setGuideSuccess(''), 3000);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save guide');
+    }
+  };
+
+  const handleEditGuideClick = (g) => {
+    setGuideEditMode(true);
+    setEditingGuideId(g._id);
+    setNewGuideForm({
+      name: g.name,
+      email: g.email,
+      phone: g.phone,
+      status: g.status || 'Active'
+    });
+    setActiveTab('guides');
+  };
+
+  const handleCancelGuideEdit = () => {
+    setNewGuideForm({ name: '', email: '', phone: '', status: 'Active' });
+    setGuideEditMode(false);
+    setEditingGuideId(null);
+  };
+
+  const handleDeleteGuide = async (guideId) => {
+    if (!window.confirm('Are you sure you want to delete this guide?')) return;
+    try {
+      const res = await guideAPI.delete(guideId);
+      if (res.data.success) {
+        setGuides(prev => prev.filter(g => g._id !== guideId));
+      }
+    } catch (err) {
+      alert('Failed to delete guide');
+    }
+  };
+
   const handleLogout = () => {
     dispatch(logout());
     navigate('/');
@@ -370,6 +443,13 @@ export default function AgencyDashboard() {
             >
               🎒 Manage Packages
             </button>
+
+            <button
+              onClick={() => setActiveTab('guides')}
+              className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition ${activeTab === 'guides' ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-black'}`}
+            >
+              👤 Manage Guides
+            </button>
             
             <button
               onClick={() => setActiveTab('analytics')}
@@ -420,6 +500,7 @@ export default function AgencyDashboard() {
                       <th className="p-4 rounded-l-lg">Booking No</th>
                       <th className="p-4">Traveler Details</th>
                       <th className="p-4">Package Name</th>
+                      <th className="p-4">Guide</th>
                       <th className="p-4">Travel Date</th>
                       <th className="p-4">Total Price</th>
                       <th className="p-4">Status</th>
@@ -436,6 +517,16 @@ export default function AgencyDashboard() {
                         </td>
                         <td className="p-4 font-semibold text-gray-900">
                           {b.packageOrServiceId?.packageName || 'Deleted Package'}
+                        </td>
+                        <td className="p-4">
+                          {b.assignedGuideId ? (
+                            <div>
+                              <div className="text-sm font-semibold text-black">{b.assignedGuideId.name}</div>
+                              <div className="text-xs text-gray-400">{b.assignedGuideId.email}</div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Not Assigned</span>
+                          )}
                         </td>
                         <td className="p-4 text-xs">
                           {new Date(b.bookingDate).toLocaleDateString()}
@@ -856,6 +947,118 @@ export default function AgencyDashboard() {
               )}
             </div>
 
+          </div>
+        )}
+
+        {activeTab === 'guides' && (
+          <div className="space-y-8">
+            {/* Create guide form */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-3xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-6">{guideEditMode ? 'Edit Guide Profile' : 'Add New Travel Guide'}</h3>
+              
+              {guideSuccess && (
+                <div className="p-3 bg-green-50 text-green-800 rounded border border-green-200 mb-6 text-sm text-center">
+                  {guideSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitGuide} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Guide Name</label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border border-gray-200 rounded text-sm focus:outline-none"
+                      value={newGuideForm.name}
+                      onChange={(e) => setNewGuideForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      className="w-full p-2 border border-gray-200 rounded text-sm focus:outline-none"
+                      value={newGuideForm.email}
+                      onChange={(e) => setNewGuideForm(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      className="w-full p-2 border border-gray-200 rounded text-sm focus:outline-none"
+                      value={newGuideForm.phone}
+                      onChange={(e) => setNewGuideForm(prev => ({ ...prev, phone: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Status</label>
+                    <select
+                      className="w-full p-2 border border-gray-200 rounded text-sm focus:outline-none"
+                      value={newGuideForm.status}
+                      onChange={(e) => setNewGuideForm(prev => ({ ...prev, status: e.target.value }))}
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-black text-white hover:bg-gray-800 rounded font-semibold text-xs transition"
+                  >
+                    {guideEditMode ? 'Update Guide' : 'Register Guide'}
+                  </button>
+                  {guideEditMode && (
+                    <button
+                      type="button"
+                      onClick={handleCancelGuideEdit}
+                      className="px-6 py-2 bg-gray-100 text-gray-600 hover:bg-gray-200 rounded font-semibold text-xs transition"
+                    >
+                      Cancel Edit
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* List guides */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-3xl">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Active & Registered Guides ({guides.length})</h3>
+              {guides.length === 0 ? (
+                <p className="text-gray-400 text-sm italic">No registered travel guides created yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {guides.map(g => (
+                    <div key={g._id} className="p-4 border border-gray-100 rounded-lg flex justify-between items-center bg-gray-50/50">
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-sm">{g.name}</h4>
+                        <p className="text-xs text-gray-500">Email: {g.email} • Phone: {g.phone} • Status: <span className={g.status === 'Active' ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}>{g.status}</span></p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditGuideClick(g)}
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold rounded transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteGuide(g._id)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
