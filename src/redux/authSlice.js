@@ -1,8 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { authAPI } from '../services/api.js';
+
+// Clean up legacy localStorage token if it exists
+localStorage.removeItem('token');
 
 const initialState = {
   user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
-  token: localStorage.getItem('token') || null,
+  token: localStorage.getItem('user') ? 'cookie-stored-token' : null,
   loading: false,
   error: null,
 };
@@ -19,8 +23,7 @@ const authSlice = createSlice({
     loginSuccess: (state, action) => {
       state.loading = false;
       state.user = action.payload.user;
-      state.token = action.payload.token;
-      localStorage.setItem('token', action.payload.token);
+      state.token = action.payload.token || 'cookie-stored-token';
       localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     loginFailure: (state, action) => {
@@ -36,8 +39,7 @@ const authSlice = createSlice({
     registerSuccess: (state, action) => {
       state.loading = false;
       state.user = action.payload.user;
-      state.token = action.payload.token;
-      localStorage.setItem('token', action.payload.token);
+      state.token = action.payload.token || 'cookie-stored-token';
       localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     registerFailure: (state, action) => {
@@ -45,12 +47,11 @@ const authSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Logout
-    logout: (state) => {
+    // Clear Auth State
+    clearAuth: (state) => {
       state.user = null;
       state.token = null;
       state.error = null;
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
     },
 
@@ -68,8 +69,18 @@ export const {
   registerStart,
   registerSuccess,
   registerFailure,
-  logout,
+  clearAuth,
   clearError,
 } = authSlice.actions;
+
+// Async thunk logout to clear cookie on backend
+export const logout = () => async (dispatch) => {
+  try {
+    await authAPI.logout();
+  } catch (err) {
+    console.error('Server logout failed:', err);
+  }
+  dispatch(clearAuth());
+};
 
 export default authSlice.reducer;
