@@ -28,6 +28,8 @@ export default function TaxiDetails() {
     pickupLocation: '',
     dropoffLocation: '',
     bookingDate: '',
+    expectedEndDate: '',
+    expectedEndTime: '',
     tripDistance: '',
     numberOfPeople: 1,
     vehiclePreference: '',
@@ -115,6 +117,8 @@ export default function TaxiDetails() {
         bookingType: 'taxi',
         packageOrServiceId: taxi._id,
         bookingDate: bookingFormData.bookingDate,
+        expectedEndDate: bookingFormData.expectedEndDate,
+        expectedEndTime: bookingFormData.expectedEndTime,
         totalPrice,
         numberOfPeople: Number(bookingFormData.numberOfPeople),
         specialRequests: [
@@ -390,6 +394,29 @@ export default function TaxiDetails() {
                         value={bookingFormData.bookingDate}
                         onChange={e => setBookingFormData(prev => ({ ...prev, bookingDate: e.target.value }))}
                       />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Expected End Date</label>
+                        <input
+                          type="date"
+                          required
+                          className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                          value={bookingFormData.expectedEndDate}
+                          onChange={e => setBookingFormData(prev => ({ ...prev, expectedEndDate: e.target.value }))}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Expected End Time</label>
+                        <input
+                          type="time"
+                          required
+                          className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                          value={bookingFormData.expectedEndTime}
+                          onChange={e => setBookingFormData(prev => ({ ...prev, expectedEndTime: e.target.value }))}
+                        />
+                      </div>
                     </div>
 
                     <div className="flex gap-3">

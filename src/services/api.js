@@ -113,4 +113,4 @@ export const guideAPI = {
   delete: (id) => api.delete(`/agencies/guides/${id}`),
 };
 
-export default api;
+export default api;
